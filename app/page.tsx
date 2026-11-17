@@ -105,7 +105,24 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/">["searc
 
         {/* Incidents */}
         <section className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
-          <h2 className="text-sm font-semibold">Open incidents</h2>
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold">Open incidents</h2>
+            {o.serviceNowHost ? (
+              <span
+                className={`flex items-center gap-1.5 font-mono text-[11px] ${
+                  o.serviceNowErrors > 0 ? "text-rose-600" : "text-emerald-700"
+                }`}
+                title={o.serviceNowHost}
+              >
+                <span
+                  className={`h-1.5 w-1.5 rounded-full ${o.serviceNowErrors > 0 ? "bg-rose-500" : "bg-emerald-500"}`}
+                />
+                ServiceNow {o.serviceNowErrors > 0 ? `· ${o.serviceNowErrors} sync error(s)` : "connected"}
+              </span>
+            ) : (
+              <span className="font-mono text-[11px] text-zinc-400">ServiceNow not configured</span>
+            )}
+          </div>
           {incidents.length === 0 ? (
             <p className="mt-4 text-sm text-zinc-500">No open incidents. All failed messages have been handled.</p>
           ) : (
@@ -117,7 +134,11 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/">["searc
                       INC{String(i.id).padStart(5, "0")} · {i.title.replace("Integration failure: ", "")}
                     </p>
                     <p className="mt-0.5 line-clamp-2 text-xs text-zinc-500">{i.description}</p>
-                    <p className="mt-0.5 font-mono text-[11px] text-zinc-400">{timeAgo(i.created_at)}</p>
+                    <p className="mt-0.5 font-mono text-[11px] text-zinc-400">
+                      {timeAgo(i.created_at)}
+                      {i.sn_number && <span className="text-emerald-700"> · ServiceNow {i.sn_number}</span>}
+                      {i.sn_error && <span className="text-rose-600"> · sync failed: {i.sn_error}</span>}
+                    </p>
                   </Link>
                 </li>
               ))}

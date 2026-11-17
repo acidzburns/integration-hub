@@ -105,6 +105,14 @@ export function ControlPanel({ failureRate }: { failureRate: number }) {
               {lastRun.polled} polled · {lastRun.delivered} delivered · {lastRun.retrying} retrying ·{" "}
               {lastRun.failed} failed
               {lastRun.pollError && <span className="text-rose-600"> · poll error: {lastRun.pollError}</span>}
+              {lastRun.serviceNow?.configured && (
+                <>
+                  {" "}· ServiceNow: {lastRun.serviceNow.created} created, {lastRun.serviceNow.resolved} resolved
+                  {lastRun.serviceNow.errors > 0 && (
+                    <span className="text-rose-600">, {lastRun.serviceNow.errors} error(s)</span>
+                  )}
+                </>
+              )}
             </>
           )}
         </p>

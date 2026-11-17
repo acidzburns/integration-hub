@@ -25,6 +25,7 @@ flowchart LR
 | **4xx** such as 422 bad data (permanent problem) | `FAILED` immediately, no pointless retries, incident opened |
 | Operator clicks **Reprocess** | Message gets a fresh set of attempts; incident auto-resolves on success |
 | Same shipment sent twice | Warehouse is **idempotent**: no duplicate is created |
+| Incident opened / resolved | Synced to **ServiceNow** as a real incident ticket, and resolved there too |
 
 You can break the Warehouse from the dashboard (**20% errors / 50% errors / Outage**) to watch retries and incidents happen live.
 
@@ -37,11 +38,22 @@ You can break the Warehouse from the dashboard (**20% errors / 50% errors / Outa
 | Message monitor + delivery log | Monitor Message Processing |
 | Correlation ID on every message | Message ID / Correlation ID |
 | Retry with backoff | JMS retry / exception subprocess |
-| Incidents | Alerting → ServiceNow ticket |
+| Incidents synced to ServiceNow | Alerting → ServiceNow ticket |
+
+## ServiceNow integration
+
+When a message fails, the hub creates an incident in **ServiceNow** through the **Table API** (`POST /api/now/table/incident`). When the message is later reprocessed and delivered, the hub resolves the ServiceNow incident too (`PATCH`, state = Resolved).
+
+It uses an **outbox pattern**: incidents are saved locally first, then synced. If ServiceNow is down or hibernating, nothing is lost. The sync retries on the next run, and the error is shown on the dashboard.
+
+Each ServiceNow incident carries the message's **correlation ID**, so you can trace a ticket back to the exact message.
+
+To connect your own instance (a free ServiceNow Personal Developer Instance works), copy `.env.example` to `.env.local` and fill in the values. Without them, the hub runs normally and keeps incidents locally.
 
 ## Tech stack
 
 - **Next.js 16** (App Router, Server Actions, Route Handlers) + **TypeScript**
+- **ServiceNow Table API** (REST, Basic auth) for incident management
 - **SQLite** (Node's built-in `node:sqlite`, no setup needed)
 - **Tailwind CSS**
 - **Vitest**: unit and integration tests
@@ -84,13 +96,15 @@ lib/
   integration.ts                  The hub engine: poll, map, deliver, retry, incidents
   mapping.ts                      Data formats, mapping and validation
   db.ts                           SQLite schema and helpers
+  servicenow.ts                   ServiceNow connector (incident sync)
 tests/                            Vitest tests
 .github/workflows/ci.yml          CI pipeline
 ```
 
 ## Roadmap
 
-- [ ] Create real tickets in **Jira** / **ServiceNow** when an incident opens
+- [x] Create real tickets in **ServiceNow** when an incident opens
+- [ ] OAuth instead of Basic auth for ServiceNow
 - [ ] **Docker** + Docker Compose
 - [ ] PostgreSQL and a live deployed demo
 - [ ] Scheduled polling with a cron job instead of the dashboard's auto-run

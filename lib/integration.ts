@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { all, get, getSetting, now, run, setSetting } from "./db";
 import { mapOrderToShipment, toExternalRef, type ShopOrder } from "./mapping";
+import { syncIncidents, type SyncSummary } from "./servicenow";
 
 /**
  * The Integration Hub engine.
@@ -46,6 +47,7 @@ export type RunSummary = {
   retrying: number;
   failed: number;
   pollError?: string;
+  serviceNow?: SyncSummary;
 };
 
 /** Seconds to wait before the next attempt: 5, 15, 45… */
@@ -102,6 +104,9 @@ export async function runIntegration(baseUrl: string): Promise<RunSummary> {
       else if (status === "RETRY") summary.retrying++;
       else if (status === "FAILED") summary.failed++;
     }
+
+    // 5. Push new and resolved incidents to ServiceNow (skipped if not configured)
+    summary.serviceNow = await syncIncidents();
   } finally {
     lock.hubRunning = false;
   }

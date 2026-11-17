@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { reprocess } from "@/app/actions";
 import { getMessage } from "@/lib/queries";
+import { serviceNowLink } from "@/lib/servicenow";
 import { StatusBadge, formatTime, timeAgo } from "@/app/components/ui";
 
 export default function Page({ params }: PageProps<"/messages/[id]">) {
@@ -117,6 +118,25 @@ async function MessageDetail({ params }: { params: PageProps<"/messages/[id]">["
                 </div>
                 <p className="mt-1">{i.title}</p>
                 <p className="mt-0.5 text-xs text-zinc-500">{i.description}</p>
+                {i.sn_sys_id && (
+                  <p className="mt-1.5 text-xs">
+                    ServiceNow{" "}
+                    {serviceNowLink(i.sn_sys_id) ? (
+                      <a
+                        href={serviceNowLink(i.sn_sys_id)!}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="font-mono text-sky-700 hover:underline"
+                      >
+                        {i.sn_number ?? i.sn_sys_id} ↗
+                      </a>
+                    ) : (
+                      <span className="font-mono">{i.sn_number}</span>
+                    )}
+                    {i.sn_synced_status && <span className="text-zinc-500"> · {i.sn_synced_status.toLowerCase()} in ServiceNow</span>}
+                  </p>
+                )}
+                {i.sn_error && <p className="mt-1.5 text-xs text-rose-600">ServiceNow sync failed: {i.sn_error}</p>}
               </li>
             ))}
           </ul>

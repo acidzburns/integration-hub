@@ -1,4 +1,5 @@
 import { all, get, getSetting } from "./db";
+import { getServiceNowConfig } from "./servicenow";
 import type { Message, MessageStatus } from "./integration";
 
 /** Read-only queries for the monitoring screens. */
@@ -21,6 +22,10 @@ export type Incident = {
   status: "OPEN" | "RESOLVED";
   created_at: string;
   resolved_at: string | null;
+  sn_sys_id: string | null;
+  sn_number: string | null;
+  sn_synced_status: string | null;
+  sn_error: string | null;
 };
 
 export function getOverview() {
@@ -51,6 +56,12 @@ export function getOverview() {
     failureRate: Number(getSetting("warehouse_failure_rate") || 0),
     shipmentsReceived: get<{ n: number }>("SELECT COUNT(*) AS n FROM warehouse_shipments")?.n ?? 0,
     ordersInShop: get<{ n: number }>("SELECT COUNT(*) AS n FROM shop_orders")?.n ?? 0,
+    serviceNowHost: (() => {
+      const config = getServiceNowConfig();
+      return config ? new URL(config.instance).host : null;
+    })(),
+    serviceNowErrors:
+      get<{ n: number }>("SELECT COUNT(*) AS n FROM incidents WHERE sn_error IS NOT NULL")?.n ?? 0,
   };
 }
 

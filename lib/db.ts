@@ -85,9 +85,28 @@ export function getDb(): DatabaseSync {
     const db = new DatabaseSync(file);
     db.exec("PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000;");
     db.exec(SCHEMA);
+    migrate(db);
     globalForDb.hubDb = db;
   }
   return globalForDb.hubDb;
+}
+
+/**
+ * Small migrations: add columns introduced after the first version, so an
+ * existing hub.db keeps working without deleting it. Safe to run every start.
+ */
+function migrate(db: DatabaseSync) {
+  const columns = (db.prepare("PRAGMA table_info(incidents)").all() as { name: string }[]).map((c) => c.name);
+  const added: Record<string, string> = {
+    sn_sys_id: "TEXT", // ServiceNow record ID
+    sn_number: "TEXT", // ServiceNow incident number, e.g. INC0010023
+    sn_synced_status: "TEXT", // status ServiceNow last confirmed: OPEN | RESOLVED
+    sn_error: "TEXT", // last sync error, if any
+    sn_synced_at: "TEXT",
+  };
+  for (const [name, type] of Object.entries(added)) {
+    if (!columns.includes(name)) db.exec(`ALTER TABLE incidents ADD COLUMN ${name} ${type}`);
+  }
 }
 
 export function all<T>(sql: string, ...params: SQLInputValue[]): T[] {
